@@ -1,17 +1,17 @@
 <template>
   <el-header class="header">
-    <span>管理系统 v0.3.0</span>
     <div class="header-right">
-      <el-tag type="success" effect="plain" size="small">后端：Go + Gin</el-tag>
-      <el-dropdown v-if="userStore.isLoggedIn">
-        <span class="user-name">
-          <el-icon><UserFilled /></el-icon>
-          {{ userStore.username }}
+      <el-dropdown v-if="userStore.isLoggedIn" trigger="click">
+        <span class="user-entry">
+          <span class="avatar">{{ userStore.username.charAt(0).toUpperCase() }}</span>
+          <span class="name">{{ userStore.username }}</span>
           <el-icon class="arrow"><ArrowDown /></el-icon>
         </span>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item @click="handleLogout">退出登录</el-dropdown-item>
+            <el-dropdown-item :icon="SwitchButton" @click="handleLogout">
+              退出登录
+            </el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
@@ -21,6 +21,7 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
+import { ArrowDown, SwitchButton } from '@element-plus/icons-vue'
 import { useUserStore } from '../../stores/user'
 
 const router = useRouter()
@@ -36,22 +37,48 @@ function handleLogout() {
 .header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   border-bottom: 1px solid #e4e7ed;
-  font-weight: 600;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
 }
 
-.user-name {
+.user-entry {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   cursor: pointer;
+  outline: none;
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f8cff, #8a5cf6);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.name {
+  font-size: 14px;
   font-weight: 500;
+  color: #303133;
+}
+
+.arrow {
+  font-size: 12px;
+  color: #909399;
+}
+
+.user-entry:hover .arrow {
+  color: #409eff;
 }
 </style>
