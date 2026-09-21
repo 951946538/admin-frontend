@@ -3,11 +3,12 @@
     <!-- Naive UI 组件示例 -->
     <n-card title="系统概览" size="small">
       <div class="stats">
-        <n-statistic label="用户总数" :value="userTotal">
+        <n-statistic label="用户总数" :value="userTotal >= 0 ? userTotal : '—'">
           <template #suffix>
-            <span class="unit">人</span>
+            <span class="unit">{{ userTotal >= 0 ? '人' : '' }}</span>
           </template>
         </n-statistic>
+        <n-statistic label="当前角色" :value="userStore.role === 'super_admin' ? '超级管理员' : '普通用户'" />
         <n-statistic label="前端框架" value="Vue 3" />
         <n-statistic label="UI 库" value="Element Plus + Naive UI" />
         <n-statistic label="后端" value="Go + Gin + MySQL" />
@@ -41,10 +42,12 @@ import { useUserStore } from '../../stores/user'
 
 const userStore = useUserStore()
 
-const userTotal = ref(0)
+const userTotal = ref(-1) // -1 表示无权查看（仅超管）
 const apiOk = ref(false)
 
 onMounted(async () => {
+  // 用户总数接口仅超管可调用，非超管不请求
+  if (!userStore.isSuperAdmin) return
   try {
     const data = await listUsers({ page: 1, page_size: 1 })
     userTotal.value = data.total ?? 0

@@ -11,7 +11,9 @@ const router = createRouter({
       component: () => import('../views/login/index.vue'),
       meta: { public: true },
     },
-    // 主布局下的业务页面（新增页面在此登记，并在 SideMenu 中加菜单项）
+    // 主布局下的业务页面
+    // 新增页面在此登记，并在 SideMenu 中加菜单项；
+    // 仅超管可见的页面加 meta: { requiresSuperAdmin: true }
     {
       path: '/',
       component: Layout,
@@ -25,19 +27,28 @@ const router = createRouter({
           path: 'users',
           name: 'users',
           component: () => import('../views/user/index.vue'),
+          meta: { requiresSuperAdmin: true },
         },
       ],
     },
   ],
 })
 
-// 全局路由守卫：未登录跳转登录页
+// 全局路由守卫：未登录跳登录页；无权限页面跳首页
 router.beforeEach((to) => {
-  const isLoggedIn = !!localStorage.getItem('user')
+  const token = localStorage.getItem('token')
+  const user = JSON.parse(localStorage.getItem('user') || 'null')
+
   if (to.meta.public) {
-    return isLoggedIn ? { path: '/' } : true
+    return token && user ? { path: '/' } : true
   }
-  return isLoggedIn ? true : { path: '/login' }
+  if (!token || !user) {
+    return { path: '/login' }
+  }
+  if (to.meta.requiresSuperAdmin && user.role !== 'super_admin') {
+    return { path: '/' }
+  }
+  return true
 })
 
 export default router

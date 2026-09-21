@@ -38,7 +38,7 @@ import { useUserStore } from '../../stores/user'
 const SIZE = 60 // 泡泡基础尺寸（px）
 const EDGE_MARGIN = 14 // 贴边时与窗口边缘的间距
 const VISIBLE_RATIO = 0.55 // 缩回停靠时露出的比例
-const IDLE_MS = 250 // 鼠标移开后多久缩回
+const IDLE_MS = 500 // 鼠标移开后多久缩回
 const DOCK_AFTER_DRAG_MS = 1050 // 拖动贴边后多久缩回（等弹跳+果冻动画播完）
 const SNAP_MS = 450 // 贴边动画时长
 

@@ -16,7 +16,8 @@
         <el-icon><Odometer /></el-icon>
         <span>仪表盘</span>
       </el-menu-item>
-      <el-menu-item index="/users">
+      <!-- 仅超级管理员可见（后端接口同步做了超管校验） -->
+      <el-menu-item v-if="userStore.isSuperAdmin" index="/users">
         <el-icon><User /></el-icon>
         <span>用户管理</span>
       </el-menu-item>
@@ -25,7 +26,12 @@
 </template>
 
 <script setup>
-// 侧边导航菜单（新增页面时在此登记菜单项 + router/index.js 登记路由）
+// 侧边导航菜单
+// 新增页面时在此登记菜单项 + router/index.js 登记路由；
+// 有角色限制的菜单项必须加 v-if 并与路由 meta 对应
+import { useUserStore } from '../../stores/user'
+
+const userStore = useUserStore()
 </script>
 
 <style scoped>

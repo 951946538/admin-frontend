@@ -54,13 +54,23 @@ admin-frontend/
 - 样式：组件内 `scoped`；全局样式只写 `styles/index.css`
 - 注释使用中文；复杂逻辑必须注释
 
-## 4. 文档同步（强制）
+## 4. 角色与权限（强制）
+
+- 登录态与角色统一从 `stores/user.js` 读取（`token` + `user.role`），禁止在组件中散落 localStorage 读写
+- 所有请求自动携带 `Authorization: Bearer <token>`（`api/request.js` 统一处理）；收到 401 自动清除会话并回登录页，**不要在各页面单独处理 401**
+- 受限页面**三件套缺一不可**：
+  1. 路由 `meta: { requiresSuperAdmin: true }`（守卫统一拦截，无权限回首页）
+  2. `SideMenu` 菜单项 `v-if="userStore.isSuperAdmin"`（不显示入口）
+  3. 页面内受限数据：非授权角色**不发起请求**（如仪表盘用户总数仅超管拉取），避免必然 403 的调用
+- 前端显隐只是体验层，接口权限由后端强制校验，**不得以"前端已经隐藏"为由省略后端权限**
+
+## 5. 文档同步（强制）
 
 - 接口对接变化 → 更新 `docs/接口对接说明.md` 的接口表格
 - 结构/规范变化 → 更新 `README.md` 与本文档变更记录
 - 后端接口的权威定义见后端仓库 `docs/API_CHANGELOG.md`
 
-## 5. 提交规范
+## 6. 提交规范
 
 - commit message 格式：`<类型>: <描述>`，类型：feat / fix / refactor / docs / chore
 - 示例：`feat: 新增登录页`、`refactor: 用户页拆分为组件`
@@ -69,4 +79,5 @@ admin-frontend/
 
 | 日期 | 内容 |
 |------|------|
+| 2026-09-22 | v0.4.0 新增「角色与权限」强制规范（token、路由守卫、菜单显隐、401 统一处理） |
 | 2026-09-22 | 初版：多级目录、组件式开发、状态与接口分层规范 |

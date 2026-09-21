@@ -156,9 +156,9 @@ async function handleLogin() {
   if (!data) return
   loading.value = true
   try {
-    const user = await login(data.username, data.password)
-    userStore.setUser(user)
-    ElMessage.success(`欢迎回来，${user.username}`)
+    const session = await login(data.username, data.password)
+    userStore.setSession(session.token, session.user)
+    ElMessage.success(`欢迎回来，${session.user.username}`)
     router.push('/')
   } finally {
     loading.value = false
@@ -175,9 +175,9 @@ async function handleRegister() {
   loading.value = true
   try {
     // 注册成功 → 无感自动登录
-    const user = await register(data.username, data.password)
-    userStore.setUser(user)
-    ElMessage.success(`注册成功，已自动登录，欢迎 ${user.username}`)
+    const session = await register(data.username, data.password)
+    userStore.setSession(session.token, session.user)
+    ElMessage.success(`注册成功，已自动登录，欢迎 ${session.user.username}`)
     router.push('/')
   } finally {
     loading.value = false
