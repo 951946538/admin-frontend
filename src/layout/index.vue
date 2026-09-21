@@ -1,19 +1,18 @@
 <template>
   <el-container class="layout">
     <SideMenu />
-    <el-container>
-      <HeaderBar />
-      <el-main class="main">
-        <router-view />
-      </el-main>
-    </el-container>
+    <el-main class="main">
+      <router-view />
+    </el-main>
+    <!-- 固定悬浮在页面右上角的用户头像泡泡 -->
+    <UserBubble />
   </el-container>
 </template>
 
 <script setup>
-// 主布局：左侧菜单 + 顶栏 + 内容区（内容由子路由渲染）
+// 主布局：左侧菜单 + 内容区 + 悬浮用户头像
 import SideMenu from './components/SideMenu.vue'
-import HeaderBar from './components/HeaderBar.vue'
+import UserBubble from './components/UserBubble.vue'
 </script>
 
 <style scoped>
