@@ -1,15 +1,17 @@
 <template>
   <div
     ref="bubbleRef"
-    class="bubble"
-    :class="{ docked: docked, dragging: dragging }"
+    class="bubble-wrap"
+    :class="{ dragging }"
     :style="{ left: pos.x + 'px', top: pos.y + 'px' }"
     :title="userStore.username"
     @pointerdown="onPointerDown"
     @pointerenter="onPointerEnter"
     @pointerleave="onPointerLeave"
   >
-    {{ userStore.username.charAt(0).toUpperCase() }}
+    <span class="bubble" :class="{ docked, jelly: jellyActive }">
+      {{ userStore.username.charAt(0).toUpperCase() }}
+    </span>
 
     <!-- 点击弹出的菜单 -->
     <Transition name="menu-fade">
@@ -24,19 +26,20 @@
 </template>
 
 <script setup>
-// 360 风格悬浮头像泡泡：
-// - 可任意拖动
-// - 静置 2 秒自动吸附到最近的窗口边缘（缩小并半隐）
-// - 鼠标悬停自动弹回，点击（非拖动）弹出菜单
+// 360 风格悬浮头像泡泡（生动版）：
+// - 拖动松手后立即弹向最近的屏幕边缘（弹性回弹 + 落地果冻抖动）
+// - 静置 1 秒自动缩小半隐停靠，停靠后带呼吸动画
+// - 鼠标悬停弹回放大，点击（非拖动）弹出菜单
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { SwitchButton } from '@element-plus/icons-vue'
 import { useUserStore } from '../../stores/user'
 
 const SIZE = 60 // 泡泡基础尺寸（px）
-const EDGE_MARGIN = 12 // 弹回时与窗口边缘的间距
-const VISIBLE_RATIO = 0.55 // 停靠边缘时露出的比例
-const IDLE_MS = 2000 // 静置多久后吸附边缘
+const EDGE_MARGIN = 14 // 贴边时与窗口边缘的间距
+const VISIBLE_RATIO = 0.55 // 缩回停靠时露出的比例
+const IDLE_MS = 1000 // 静置多久后缩回
+const SNAP_MS = 450 // 贴边动画时长
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -45,10 +48,13 @@ const bubbleRef = ref(null)
 const pos = reactive({ x: 0, y: 16 })
 const dragging = ref(false)
 const docked = ref(false)
+const jellyActive = ref(false)
 const menuVisible = ref(false)
 const edge = ref('right')
 
 let idleTimer = null
+let snapTimer = null
+let jellyTimer = null
 let dragStart = { x: 0, y: 0, px: 0, py: 0 }
 let moved = false
 
@@ -63,30 +69,52 @@ function scheduleIdle() {
   idleTimer = setTimeout(dock, IDLE_MS)
 }
 
-/** 静置超时：吸附到最近的水平边缘（缩小 + 半隐） */
+/** 弹向最近的水平边缘，落地时触发果冻抖动 */
+function snapToEdge() {
+  const centerX = pos.x + SIZE / 2
+  edge.value = centerX < window.innerWidth / 2 ? 'left' : 'right'
+  pos.y = clampY(pos.y)
+  pos.x =
+    edge.value === 'left'
+      ? EDGE_MARGIN
+      : window.innerWidth - SIZE - EDGE_MARGIN
+
+  // 落地果冻效果
+  clearTimeout(snapTimer)
+  clearTimeout(jellyTimer)
+  snapTimer = setTimeout(() => {
+    jellyActive.value = true
+    jellyTimer = setTimeout(() => (jellyActive.value = false), 560)
+  }, SNAP_MS)
+}
+
+/** 静置超时：缩小半隐停靠 */
 function dock() {
   if (dragging.value || menuVisible.value) {
     scheduleIdle()
     return
   }
-  const centerX = pos.x + SIZE / 2
-  edge.value = centerX < window.innerWidth / 2 ? 'left' : 'right'
   const visible = SIZE * VISIBLE_RATIO
-  pos.y = clampY(pos.y)
-  pos.x = edge.value === 'left' ? visible - SIZE : window.innerWidth - visible
+  pos.x =
+    edge.value === 'left' ? visible - SIZE : window.innerWidth - visible
   docked.value = true
 }
 
-/** 从边缘弹回完全可见 */
+/** 从停靠弹回完全显示 */
 function undock() {
   docked.value = false
   pos.x =
-    edge.value === 'left' ? EDGE_MARGIN : window.innerWidth - SIZE - EDGE_MARGIN
+    edge.value === 'left'
+      ? EDGE_MARGIN
+      : window.innerWidth - SIZE - EDGE_MARGIN
 }
 
 function onPointerDown(e) {
   if (e.button !== 0) return
   clearTimeout(idleTimer)
+  clearTimeout(snapTimer)
+  clearTimeout(jellyTimer)
+  jellyActive.value = false
   if (docked.value) undock()
   dragging.value = true
   moved = false
@@ -100,10 +128,9 @@ function onPointerMove(e) {
   const dx = e.clientX - dragStart.x
   const dy = e.clientY - dragStart.y
   if (Math.abs(dx) + Math.abs(dy) > 4) moved = true
-  // 拖动范围：允许略超出边缘，松手再拉回
   pos.x = Math.min(
-    Math.max(dragStart.px + dx, -SIZE * 0.6),
-    window.innerWidth - SIZE * 0.4,
+    Math.max(dragStart.px + dx, -SIZE * 0.4),
+    window.innerWidth - SIZE * 0.6,
   )
   pos.y = clampY(dragStart.py + dy)
 }
@@ -112,18 +139,16 @@ function onPointerUp() {
   dragging.value = false
   window.removeEventListener('pointermove', onPointerMove)
   window.removeEventListener('pointerup', onPointerUp)
-  // 拉回可视范围
-  pos.x = Math.min(
-    Math.max(pos.x, EDGE_MARGIN),
-    window.innerWidth - SIZE - EDGE_MARGIN,
-  )
+
   if (!moved) {
     // 未产生位移视为点击：切换菜单
     menuVisible.value = !menuVisible.value
     if (!menuVisible.value) scheduleIdle()
-  } else {
-    scheduleIdle()
+    return
   }
+  // 拖动结束：立即弹向边缘，随后静置缩回
+  snapToEdge()
+  scheduleIdle()
 }
 
 function onPointerEnter() {
@@ -167,6 +192,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   clearTimeout(idleTimer)
+  clearTimeout(snapTimer)
+  clearTimeout(jellyTimer)
   window.removeEventListener('pointermove', onPointerMove)
   window.removeEventListener('pointerup', onPointerUp)
   window.removeEventListener('resize', onResize)
@@ -175,43 +202,87 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.bubble {
+.bubble-wrap {
   position: fixed;
   z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 60px;
   height: 60px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #4f8cff, #8a5cf6);
-  color: #fff;
-  font-size: 24px;
-  font-weight: 600;
   cursor: grab;
   user-select: none;
   touch-action: none;
+  /* 弹性贴边动画（带过冲回弹） */
+  transition:
+    left 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+    top 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.bubble-wrap.dragging {
+  cursor: grabbing;
+  transition: none;
+}
+
+.bubble {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f8cff, #8a5cf6);
+  background-size: 150% 150%;
+  color: #fff;
+  font-size: 24px;
+  font-weight: 600;
   box-shadow: 0 6px 18px rgba(79, 140, 255, 0.45);
   transition:
-    left 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    top 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.2s ease;
+    transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s ease,
+    background-position 0.6s ease;
 }
 
-.bubble:hover {
-  box-shadow: 0 8px 22px rgba(79, 140, 255, 0.6);
+.bubble-wrap:hover .bubble {
+  transform: scale(1.1);
+  background-position: 100% 100%;
+  box-shadow: 0 10px 26px rgba(106, 92, 255, 0.6);
 }
 
-.bubble.dragging {
-  cursor: grabbing;
-  transition: box-shadow 0.2s ease;
+/* 落地果冻抖动 */
+.bubble.jelly {
+  animation: jelly 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* 停靠边缘时缩小 */
+@keyframes jelly {
+  0% {
+    transform: scale(1, 1);
+  }
+  30% {
+    transform: scale(1.25, 0.72);
+  }
+  55% {
+    transform: scale(0.82, 1.18);
+  }
+  75% {
+    transform: scale(1.08, 0.94);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+/* 停靠态：缩小 + 呼吸动画 */
 .bubble.docked {
-  transform: scale(0.8);
-  box-shadow: 0 4px 10px rgba(79, 140, 255, 0.35);
+  animation: breathe 2.6s ease-in-out infinite;
+  box-shadow: 0 4px 12px rgba(79, 140, 255, 0.35);
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(0.78);
+  }
+  50% {
+    transform: scale(0.85);
+  }
 }
 
 /* 弹出菜单 */
@@ -236,6 +307,7 @@ onBeforeUnmount(() => {
   color: #303133;
   cursor: pointer;
   white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .menu-item:hover {
