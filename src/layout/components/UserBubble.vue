@@ -38,7 +38,8 @@ import { useUserStore } from '../../stores/user'
 const SIZE = 60 // 泡泡基础尺寸（px）
 const EDGE_MARGIN = 14 // 贴边时与窗口边缘的间距
 const VISIBLE_RATIO = 0.55 // 缩回停靠时露出的比例
-const IDLE_MS = 1000 // 静置多久后缩回
+const IDLE_MS = 250 // 鼠标移开后多久缩回
+const DOCK_AFTER_DRAG_MS = 1050 // 拖动贴边后多久缩回（等弹跳+果冻动画播完）
 const SNAP_MS = 450 // 贴边动画时长
 
 const router = useRouter()
@@ -64,9 +65,9 @@ function clampY(y) {
   return Math.min(Math.max(y, 8), window.innerHeight - SIZE - 8)
 }
 
-function scheduleIdle() {
+function scheduleIdle(ms = IDLE_MS) {
   clearTimeout(idleTimer)
-  idleTimer = setTimeout(dock, IDLE_MS)
+  idleTimer = setTimeout(dock, ms)
 }
 
 /** 弹向最近的水平边缘，落地时触发果冻抖动 */
@@ -146,9 +147,9 @@ function onPointerUp() {
     if (!menuVisible.value) scheduleIdle()
     return
   }
-  // 拖动结束：立即弹向边缘，随后静置缩回
+  // 拖动结束：立即弹向边缘，动画播完后静置缩回
   snapToEdge()
-  scheduleIdle()
+  scheduleIdle(DOCK_AFTER_DRAG_MS)
 }
 
 function onPointerEnter() {
