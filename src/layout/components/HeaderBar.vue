@@ -1,6 +1,6 @@
 <template>
   <el-header class="header">
-    <span>管理系统 v0.2.0</span>
+    <span>管理系统 v0.3.0</span>
     <div class="header-right">
       <el-tag type="success" effect="plain" size="small">后端：Go + Gin</el-tag>
       <el-dropdown v-if="userStore.isLoggedIn">
